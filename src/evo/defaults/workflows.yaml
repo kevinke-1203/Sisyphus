@@ -1,0 +1,99 @@
+agents:
+  planner:
+    role: Execution planner
+    system_prompt: >
+      You are a senior software planner. Explore the codebase, then produce
+      three structured documents: requirements analysis (for user review),
+      technical design (for coder), and test cases (for tester).
+    allowed_tools: [Read, Glob, Grep]
+    max_turns: 15
+  coder:
+    role: Code implementer
+    system_prompt: >
+      You are a senior coding agent. Implement the changes described in the
+      design document. Make minimal targeted fixes on retry.
+    allowed_tools: [Read, Write, Edit, Bash, Glob, Grep]
+    permission_mode: acceptEdits
+    max_turns: 15
+  api_tester:
+    role: API tester
+    system_prompt: >
+      You are a senior API/interface testing agent. Use the available project
+      or user skills to verify API, backend, CLI, library, and integration
+      behavior. If an API testing skill is configured for you, invoke and follow it.
+      Do not run browser UI automation; that belongs to the ui_tester agent.
+      Report RESULT: PASS or RESULT: FAIL with details.
+    allowed_tools: [Read, Bash, Glob, Grep]
+    permission_mode: acceptEdits
+    max_turns: 15
+  ui_tester:
+    role: UI tester
+    system_prompt: >
+      You are a senior browser UI testing agent. Use the hephaestus-ui-test skill
+      when available to run markdown browser UI test cases. Run from the source
+      worktree, not from the Hephaestus checkout. Do not run API/backend verification;
+      that belongs to the api_tester agent. Report RESULT: PASS or RESULT: FAIL
+      with report/log paths and concrete failure reasons.
+    allowed_tools: [Read, Bash, Glob, Grep]
+    permission_mode: acceptEdits
+    max_turns: 20
+    skills: [hephaestus-ui-test]
+  tester:
+    role: Code tester
+    system_prompt: >
+      You are a senior testing agent. Run the test cases provided by the planner
+      using pytest. Create test files if needed. Report RESULT: PASS or RESULT: FAIL
+      with details.
+    allowed_tools: [Read, Bash, Glob, Grep]
+    max_turns: 10
+workflows:
+  plan_code_test:
+    description: >
+      Setup worktree, plan with user confirmation, code, API test, UI test,
+      aggregate test results - multi-level retry, then end as failed
+    skip_confirm: false
+    max_iterations: 15
+    nodes:
+      - name: setup
+      - agent: planner
+        name: plan
+      - name: confirm
+      - agent: coder
+        name: code
+      - agent: api_tester
+        name: api_test
+      - agent: ui_tester
+        name: ui_test
+      - name: test
+      - name: archive
+    edges:
+      - from: setup
+        to: plan
+      - from: plan
+        to: confirm
+      - from: confirm
+        to: code
+        condition: user_feedback == ""
+      - from: confirm
+        to: plan
+        condition: user_feedback != ""
+      - from: code
+        to: api_test
+      - from: api_test
+        to: ui_test
+      - from: ui_test
+        to: test
+      - condition: test_passed == true
+        from: test
+        to: archive
+      - from: archive
+        to: END
+      - condition: test_passed == false and _retries.code < 3
+        from: test
+        to: code
+      - condition: test_passed == false and _retries.code >= 3 and _retries.plan < 3
+        from: test
+        to: plan
+      - condition: test_passed == false and _retries.code >= 3 and _retries.plan >= 3
+        from: test
+        to: END

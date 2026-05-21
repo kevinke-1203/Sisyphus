@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="icon"
+      href="data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAVfSURBVHgB5VuLUeMwEJWZKyBUgK8Cch2khHRwpgJCBQkVJFSQpAKggtBBuAocKiBUsKcX24wtZHlXlpIwvJkdYyLJ2q/WKzlRkUFEqb6MNF1rSksalNc6dpr25fWfpldQkiQ79d2gmR5pmmvKqT+2mpYYU50z9AQHmqaBmG5DrimjwqrOAzXG3+l4yMtnpuqU0BO4PTLjNkFk6tiA5DVt6HyQ07GsgU6v9TZgThMVE1RE9nPHVMUAFUvRd8GSy1fCaaQH3OrLUH0vIIn609WoUwClNDMVCPv9Xu12u88rkKbp4TocDtVgMFABsdJCuFG+oGKt7Y3NZkOTyYQ0o4RhXYQ24/GYVqsVvb8HibVz5QMqor03MPnZbEZao51MuyjLMsrznHpCtjpQsc57iT8U44EFAV5SxQV55vMwda6Zj0ajA1Mg/K39n9UPruGJDZf5jDywWCxaJw5rQAyAgLr8mhMvYGGemHQxD9PPSQhMqE1jy+WSfIG+bYJAoPQIkugwcAlgSkK0MT+dTkNFcZrP59aYAtfxwCyY9m3MQ2Pb7ZZCAwHQZg1wFyHsVkBC34ev2pgPsGS1AhZlC5aIP0LMbALIub1t2ojNfAWbEOAewmfnJvMiZ8LSZWohhtm3AcyaMcEjHozqAlhye+HhtoB3bDw+Pn6ZB9xSgEVdAGz1mdqH6Z8K0HoPK8jr0Z/Xw6J91zqP37BSxIoNtkAstIIUAhhzW4MhrvbrSyTahcoJTJhWIMwSswslKHQ8Pz837nU21tr25eXl82+89z88PKgY0PGnca/fFZQAQ1jAI1dcZuR1RX5kb6rfUsUCLMucl8DantgBEMyaDHXBXK8RQGPAdAOsEExs4QKsGhRKWA3bGXZ7jraCxj3Ms+4aoVCV1Cq8vb0pJgYQQMppWdXvPnsyandaM1/ixP39vQoNUwCmslxdL5QnuMVLWEG9LSwgtBVcXV017k1lueAtAAlMYQk0FB3RBQCTr2sE5upaPn3w8fHRuJeU1iGAHafh5eVl456jRTBursvmuh0CPvGp6vpLFcdSOnF9fd24f3197exzc9Pck9DL4IEaM9CTv7u76xwPAdWMJ/UxXHN1YN8rEXIlHGbaDLIlQrZXayUshkoSNANPcAH2ommu/WZqXMd6vW7c397eflmuDioQBERbW1hO/f+wEE6OUnUXlcLMGqDr9RO1OsWoFkFb3L0EjgUJs82x6HXYTIeVw9zgHhACytcckwRzLmqDKTxBGnzofrADEtQDzbw7Vn7PgWmRwuLM9tMR9A27rBqgCBEEtrqgcBNmWReAqJZkWkHMgodkDtIhGuGQBG5gswL4+rFg25ARaj9XJjCuZIR6lK/IY5dGDBvzHnEoswkAFQ6RHZtm6DkZNtq24qSbItR2VoCEVgC/t63hoXeJMJZN2J7Pmak2kIcVtG1aqjJ17SMI12kT/M9jNyqnrpMiuoHYkcFk2wkPCAduIZksxnMds+lhYZnJb9IihI0qPnIQAW91eqe29Xe8CyBPB6GKU73ZIZfHOz3yelSLXBUdvBXqbM/nON0uSZLfrJbU45CU61RHH4I1oNTuCdkhqVIIvda0UIIA4wFOm/gdoiZBiuwSBJIkybE5tEXUh8YDZJgzF4+co7IrffmrAgD+DT9H3R5+D6p8GVfEhSpGBDoyu9Z+n7ka/PjD0qyqcDnQWn0frDnMi0HCTPFEWKiYoGJ1+JmfzNSE4HWiNCI2dIpP6KgoqOZ0OhxP6w4hwBpmRxbEe/nMoJ+X9EIpiNgWkZ8d4zZQUWNckeD4XQfTyEhHKgJYiVAfUBGchiVVn9B3fT6P3SpsFr7E/nz+P3T08cw43Z8wAAAAAElFTkSuQmCC"
+      sizes="32x32"
+    />
+    <title>sisyphus</title>
+    <style>
+      :root {
+        --bg: #0f1117;
+        --surface: #1a1d27;
+        --surface2: #242736;
+        --border: #2e3244;
+        --text: #e1e4ed;
+        --text-dim: #8b8fa3;
+        --primary: #6c8aff;
+        --primary-hover: #8aa0ff;
+        --success: #4ade80;
+        --danger: #f87171;
+        --warning: #fbbf24;
+        --radius: 8px;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+      }
+      .layout {
+        display: flex;
+        min-height: 100vh;
+      }
+      body.running-page-active {
+        overflow: hidden;
+      }
+      body.running-page-active .layout {
+        height: 100vh;
+      }
+      .sidebar {
+        width: 220px;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        padding: 20px 0;
+        flex-shrink: 0;
+      }
+      .sidebar h1 {
+        font-size: 20px;
+        padding: 0 20px 20px;
+        border-bottom: 1px solid var(--border);
+        color: var(--primary);
+      }
+      .sidebar nav {
+        padding-top: 12px;
+      }
+      .sidebar a {
+        display: block;
+        padding: 10px 20px;
+        color: var(--text-dim);
+        text-decoration: none;
+        font-size: 14px;
+        transition: all 0.15s;
+      }
+      .sidebar a:hover,
+      .sidebar a.active {
+        color: var(--text);
+        background: var(--surface2);
+      }
+      .sidebar a.active {
+        border-left: 3px solid var(--primary);
+        padding-left: 17px;
+      }
+      .main {
+        flex: 1;
+        padding: 32px;
+        overflow-y: auto;
+      }
+      body.running-page-active .main {
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .page {
+        display: none;
+      }
+      .page.active {
+        display: block;
+      }
+      #page-running.active {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        flex-direction: column;
+      }
+      #page-running h2 {
+        flex: 0 0 auto;
+      }
+      .running-card {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        padding: 0;
+        margin-bottom: 0;
+        overflow: hidden;
+      }
+      #running-list {
+        flex: 1;
+        min-height: 0;
+        padding: 24px;
+        overflow: hidden;
+      }
+      h2 {
+        font-size: 22px;
+        margin-bottom: 20px;
+        font-weight: 600;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 24px;
+        margin-bottom: 20px;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        color: var(--text-dim);
+        margin-bottom: 6px;
+        font-weight: 500;
+      }
+      input,
+      textarea,
+      select {
+        width: 100%;
+        padding: 10px 14px;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text);
+        font-size: 14px;
+        outline: none;
+        transition: border 0.15s;
+      }
+      input:focus,
+      textarea:focus,
+      select:focus {
+        border-color: var(--primary);
+      }
+      textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+      .form-row {
+        margin-bottom: 16px;
+      }
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+        color: var(--text);
+        font-size: 14px;
+      }
+      .checkbox-row input {
+        width: auto;
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .btn {
+        padding: 10px 24px;
+        border: none;
+        border-radius: var(--radius);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background: var(--primary-hover);
+      }
+      .btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .btn-secondary {
+        background: var(--surface2);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      .btn-secondary:hover {
+        border-color: var(--primary);
+      }
+      .btn-danger {
+        background: rgba(248, 113, 113, 0.12);
+        color: var(--danger);
+        border: 1px solid rgba(248, 113, 113, 0.35);
+      }
+      .btn-danger:hover {
+        background: rgba(248, 113, 113, 0.2);
+      }
+      .btn-sm {
+        padding: 4px 10px;
+        font-size: 12px;
+        border-radius: 6px;
+      }
+      .input-group {
+        display: flex;
+        gap: 8px;
+      }
+      .input-group input {
+        flex: 1;
+      }
+      .input-group .btn {
+        flex: 0 0 auto;
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+      .path-bar {
+        padding: 10px 12px;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        font-size: 13px;
+        word-break: break-all;
+        margin-bottom: 12px;
+      }
+      .directory-list {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        max-height: 360px;
+        overflow-y: auto;
+        margin-bottom: 16px;
+      }
+      .directory-item {
+        width: 100%;
+        padding: 10px 12px;
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid var(--border);
+        color: var(--text);
+        text-align: left;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .directory-item:last-child {
+        border-bottom: none;
+      }
+      .directory-item:hover {
+        background: var(--surface2);
+      }
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-dim);
+        font-weight: 500;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      tr:hover td {
+        background: var(--surface2);
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .badge-success {
+        background: rgba(74, 222, 128, 0.15);
+        color: var(--success);
+      }
+      .badge-danger {
+        background: rgba(248, 113, 113, 0.15);
+        color: var(--danger);
+      }
+      .badge-warning {
+        background: rgba(251, 191, 36, 0.15);
+        color: var(--warning);
+      }
+      .badge-info {
+        background: rgba(108, 138, 255, 0.15);
+        color: var(--primary);
+      }
+      .badge-dim {
+        background: rgba(139, 143, 163, 0.15);
+        color: var(--text-dim);
+      }
+      .empty {
+        text-align: center;
+        color: var(--text-dim);
+        padding: 40px 0;
+        font-size: 14px;
+      }
+      .status-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+      }
+      .status-dot.running {
+        background: var(--warning);
+        animation: pulse 1.5s infinite;
+      }
+      .status-dot.stopping {
+        background: var(--danger);
+        animation: pulse 1s infinite;
+      }
+      .status-dot.completed {
+        background: var(--success);
+      }
+      .status-dot.failed {
+        background: var(--danger);
+      }
+      .status-dot.pending {
+        background: var(--text-dim);
+      }
+      .status-dot.stopped {
+        background: var(--text-dim);
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+      .task-item {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .task-item:last-child {
+        border-bottom: none;
+      }
+      .task-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+      .task-text {
+        font-weight: 500;
+      }
+      .task-meta {
+        font-size: 12px;
+        color: var(--text-dim);
+      }
+      .task-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+      }
+      .task-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .status-cell {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .task-log {
+        margin-top: 10px;
+        padding: 10px 12px;
+        background: #0b0d12;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        height: 220px;
+        overflow-y: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .event-log {
+        flex: 0 0 clamp(160px, 24vh, 280px);
+        height: auto;
+        min-height: 160px;
+      }
+      .log-line {
+        color: var(--text-dim);
+        margin-bottom: 4px;
+      }
+      .log-line.agent_output {
+        color: var(--text);
+      }
+      .log-line.agent_stderr,
+      .log-line.workflow_error {
+        color: var(--danger);
+      }
+      .log-line.agent_start,
+      .log-line.agent_end,
+      .log-line.workflow {
+        color: var(--primary-hover);
+      }
+      .log-line.user_message,
+      .log-line.agent_interrupt {
+        color: var(--warning);
+      }
+      .log-prefix {
+        color: var(--text-dim);
+        margin-right: 6px;
+      }
+      .tmux-panel {
+        margin-top: 10px;
+        display: flex;
+        flex: 1 1 auto;
+        min-height: 0;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .tmux-command {
+        padding: 8px 10px;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-dim);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        word-break: break-all;
+      }
+      .tmux-log {
+        margin-top: 0;
+        flex: 1 1 0;
+        height: auto;
+        min-height: 120px;
+        color: var(--text);
+      }
+      .agent-message-form {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        display: flex;
+        gap: 8px;
+        margin: 10px -12px -12px;
+        padding: 12px;
+        align-items: flex-end;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+      }
+      .agent-message-form textarea {
+        height: 42px;
+        min-height: 42px;
+        max-height: 42px;
+        resize: none;
+        overflow: hidden;
+      }
+      .agent-message-form .btn {
+        flex: 0 0 auto;
+        padding-left: 16px;
+        padding-right: 16px;
+        white-space: nowrap;
+      }
+      .detail-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 100;
+        justify-content: center;
+        align-items: center;
+      }
+      .detail-modal.show {
+        display: flex;
+      }
+      .detail-content {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 28px;
+        max-width: 700px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+      .detail-content h3 {
+        margin-bottom: 16px;
+      }
+      .detail-content .field {
+        margin-bottom: 12px;
+      }
+      .detail-content .field-label {
+        font-size: 12px;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+      }
+      .step-list {
+        list-style: none;
+        padding: 0;
+      }
+      .step-list li {
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+      }
+      .step-list li:last-child {
+        border-bottom: none;
+      }
+      .close-btn {
+        float: right;
+        background: none;
+        border: none;
+        color: var(--text-dim);
+        font-size: 20px;
+        cursor: pointer;
+      }
+      .close-btn:hover {
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <div class="sidebar">
+        <h1>sisyphus</h1>
+        <nav>
+          <a href="#" class="active" data-page="new-task">+ 新任务</a>
+          <a href="#" data-page="running">运行中</a>
+          <a href="#" data-page="trajectories">执行轨迹</a>
+          <a href="#" data-page="workflows">工作流</a>
+        </nav>
+      </div>
+      <div class="main">
+        <!-- New Task -->
+        <div id="page-new-task" class="page active">
+          <h2>新任务</h2>
+          <div class="card">
+            <form id="task-form">
+              <div class="form-row">
+                <label>任务描述</label>
+                <textarea
+                  id="task-input"
+                  placeholder="描述你希望 sisyphus 完成的任务..."
+                  rows="4"
+                ></textarea>
+              </div>
+              <div class="form-grid">
+                <div class="form-row">
+                  <label>工作流</label>
+                  <select id="workflow-select">
+                    <option value="" data-default-workflow="plan_code_test">
+                      plan_code_test（默认）
+                    </option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <label>仓库路径</label>
+                  <div class="input-group">
+                    <input
+                      id="repo-input"
+                      type="text"
+                      placeholder="/path/to/repo"
+                    />
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      id="browse-repo-btn"
+                    >
+                      浏览
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="form-grid">
+                <div class="form-row">
+                  <label>分支</label>
+                  <input id="branch-input" type="text" value="" />
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary" id="submit-btn">
+                运行任务
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Running Tasks -->
+        <div id="page-running" class="page">
+          <h2>运行中的任务</h2>
+          <div class="card running-card">
+            <div id="running-list"></div>
+          </div>
+        </div>
+
+        <!-- Trajectories -->
+        <div id="page-trajectories" class="page">
+          <h2>执行轨迹</h2>
+          <div class="card">
+            <table id="trajectories-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>工作流</th>
+                  <th>任务</th>
+                  <th>结果</th>
+                  <th>开始时间</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="trajectories-body"></tbody>
+            </table>
+            <div id="trajectories-empty" class="empty" style="display: none">
+              还没有执行轨迹。
+            </div>
+          </div>
+        </div>
+
+        <!-- Workflows -->
+        <div id="page-workflows" class="page">
+          <h2>工作流</h2>
+          <div class="card">
+            <table id="workflows-table">
+              <thead>
+                <tr>
+                  <th>名称</th>
+                  <th>节点数</th>
+                  <th>描述</th>
+                </tr>
+              </thead>
+              <tbody id="workflows-body"></tbody>
+            </table>
+            <div id="workflows-empty" class="empty" style="display: none">
+              还没有定义工作流。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="detail-modal" id="detail-modal">
+      <div class="detail-content">
+        <button class="close-btn" id="modal-close">&times;</button>
+        <h3>轨迹详情</h3>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+    <div class="detail-modal" id="browse-modal">
+      <div class="detail-content">
+        <button class="close-btn" id="browse-close">&times;</button>
+        <h3>选择仓库目录</h3>
+        <div class="path-bar" id="browse-path"></div>
+        <div class="directory-list" id="browse-list"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="browse-parent">
+            上一级
+          </button>
+          <button type="button" class="btn btn-primary" id="browse-use">
+            使用此目录
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const runningDrafts = {};
+
+      // Navigation
+      document.querySelectorAll(".sidebar a").forEach((a) => {
+        a.addEventListener("click", (e) => {
+          e.preventDefault();
+          document
+            .querySelectorAll(".sidebar a")
+            .forEach((x) => x.classList.remove("active"));
+          document
+            .querySelectorAll(".page")
+            .forEach((x) => x.classList.remove("active"));
+          a.classList.add("active");
+          $("page-" + a.dataset.page).classList.add("active");
+          document.body.classList.toggle(
+            "running-page-active",
+            a.dataset.page === "running",
+          );
+          loadPage(a.dataset.page);
+        });
+      });
+
+      async function api(path, opts) {
+        const r = await fetch("/api/" + path, opts);
+        return r.json();
+      }
+
+      function badge(text, cls) {
+        return `<span class="badge badge-${cls}">${text}</span>`;
+      }
+
+      function outcomeBadge(outcome) {
+        const m = {
+          success: "success",
+          failure: "danger",
+          partial: "warning",
+          stopping: "warning",
+          stopped: "dim",
+        };
+        const labels = {
+          success: "成功",
+          failure: "失败",
+          partial: "部分成功",
+          running: "运行中",
+          pending: "等待中",
+          stopping: "停止中",
+          stopped: "已停止",
+          completed: "已完成",
+          failed: "失败",
+        };
+        return badge(labels[outcome] || outcome, m[outcome] || "dim");
+      }
+
+      function isStoppableStatus(status) {
+        return status === "pending" || status === "running";
+      }
+
+      function stopButton(taskId, status) {
+        if (!isStoppableStatus(status)) return "";
+        return `<button type="button" class="btn btn-danger btn-sm stop-task-btn" data-task-id="${esc(taskId)}">停止</button>`;
+      }
+
+      let currentBrowsePath = "";
+      const taskLogScroll = {};
+      const LOG_BOTTOM_THRESHOLD = 16;
+
+      function captureTaskLogScroll() {
+        document.querySelectorAll(".task-log[data-task-id]").forEach((log) => {
+          const distanceFromBottom =
+            log.scrollHeight - log.scrollTop - log.clientHeight;
+          taskLogScroll[log.dataset.taskId] = {
+            scrollTop: log.scrollTop,
+            followBottom: distanceFromBottom <= LOG_BOTTOM_THRESHOLD,
+          };
+        });
+      }
+
+      function restoreTaskLogScroll() {
+        document.querySelectorAll(".task-log[data-task-id]").forEach((log) => {
+          const state = taskLogScroll[log.dataset.taskId];
+          if (!state || state.followBottom) {
+            log.scrollTop = log.scrollHeight;
+            return;
+          }
+          log.scrollTop = Math.min(
+            state.scrollTop,
+            log.scrollHeight - log.clientHeight,
+          );
+        });
+      }
+
+      async function loadBrowsePath(path = "") {
+        const suffix = path ? "?path=" + encodeURIComponent(path) : "";
+        const data = await api("browse" + suffix);
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        currentBrowsePath = data.path;
+        $("browse-path").textContent = data.path;
+        $("browse-parent").disabled = !data.parent;
+
+        if (!data.dirs.length) {
+          $("browse-list").innerHTML = '<div class="empty">没有子目录。</div>';
+          return;
+        }
+
+        $("browse-list").innerHTML = data.dirs
+          .map(
+            (d) => `
+	        <button type="button" class="directory-item" data-path="${esc(d.path)}">${esc(d.name)}</button>
+	    `,
+          )
+          .join("");
+      }
+
+      $("browse-repo-btn").addEventListener("click", async () => {
+        $("browse-modal").classList.add("show");
+        await loadBrowsePath($("repo-input").value.trim());
+      });
+
+      $("browse-close").addEventListener("click", () => {
+        $("browse-modal").classList.remove("show");
+      });
+
+      $("browse-parent").addEventListener("click", async () => {
+        if (!currentBrowsePath) return;
+        const data = await api(
+          "browse?path=" + encodeURIComponent(currentBrowsePath),
+        );
+        if (data.parent) await loadBrowsePath(data.parent);
+      });
+
+      $("browse-use").addEventListener("click", () => {
+        $("repo-input").value = currentBrowsePath;
+        $("browse-modal").classList.remove("show");
+        loadDefaultBranch(currentBrowsePath);
+      });
+
+      $("browse-list").addEventListener("click", async (e) => {
+        const item = e.target.closest(".directory-item");
+        if (!item) return;
+        await loadBrowsePath(item.dataset.path);
+      });
+
+      // Load workflows into select
+      async function loadWorkflowOptions() {
+        const wfs = await api("workflows");
+        const sel = $("workflow-select");
+        const defaultOption = sel.querySelector("[data-default-workflow]");
+        const defaultWorkflow = defaultOption?.dataset.defaultWorkflow || "";
+        if (defaultOption) {
+          defaultOption.textContent = defaultWorkflow + "（默认）";
+        }
+        wfs.forEach((w) => {
+          if (w.name === defaultWorkflow) return;
+          const opt = document.createElement("option");
+          opt.value = w.name;
+          opt.textContent = w.name;
+          sel.appendChild(opt);
+        });
+      }
+
+      async function loadDefaultRepoPath() {
+        const data = await api("browse");
+        if (data.path) {
+          $("repo-input").value = data.path;
+          await loadDefaultBranch(data.path);
+        }
+      }
+
+      async function loadDefaultBranch(path) {
+        const repoPath = path || $("repo-input").value.trim();
+        if (!repoPath) return;
+        try {
+          const data = await api(
+            "repo-branch?path=" + encodeURIComponent(repoPath),
+          );
+          if (data.branch) {
+            $("branch-input").value = data.branch;
+          }
+        } catch (e) {
+          console.error("Failed to load default branch:", e);
+        }
+      }
+
+      // Submit task
+      $("task-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const task = $("task-input").value.trim();
+        if (!task) return;
+
+        const btn = $("submit-btn");
+        btn.disabled = true;
+        btn.textContent = "正在启动...";
+
+        try {
+          const res = await api("run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              task,
+              workflow: $("workflow-select").value,
+              repo: $("repo-input").value,
+              branch: $("branch-input").value || "main",
+            }),
+          });
+          if (res.error) {
+            alert(res.error);
+          } else {
+            $("task-input").value = "";
+            // switch to running page
+            document
+              .querySelectorAll(".sidebar a")
+              .forEach((x) => x.classList.remove("active"));
+            document
+              .querySelectorAll(".page")
+              .forEach((x) => x.classList.remove("active"));
+            document
+              .querySelector('[data-page="running"]')
+              .classList.add("active");
+            $("page-running").classList.add("active");
+            document.body.classList.add("running-page-active");
+            loadRunning();
+          }
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "运行任务";
+        }
+      });
+
+      // Load pages
+      async function loadPage(page) {
+        if (page === "running") loadRunning();
+        if (page === "trajectories") loadTrajectories();
+        if (page === "workflows") loadWorkflows();
+      }
+
+      async function loadRunning() {
+        const tasks = await api("running");
+        const el = $("running-list");
+        if (!tasks.length) {
+          el.innerHTML = '<div class="empty">没有运行中的任务。</div>';
+          return;
+        }
+        document.querySelectorAll(".agent-message-input").forEach((input) => {
+          runningDrafts[input.dataset.taskId] = input.value;
+        });
+        captureTaskLogScroll();
+        el.innerHTML = tasks
+          .map(
+            (t) => `
+        <div class="task-item">
+            <div class="task-header">
+                <div class="task-title">
+                    <span class="status-dot ${t.status}"></span>
+                    <span class="task-text">${esc(t.task)}</span>
+                    ${outcomeBadge(t.status)}
+                </div>
+                <div class="task-actions">${stopButton(t.id, t.status)}</div>
+            </div>
+            <div class="task-meta">
+                ID: ${t.id} &middot; 工作流：${t.workflow || "默认"}
+                ${t.transport === "tmux" ? " &middot; tmux：" + esc(t.tmux_session || "") : ""}
+                ${t.error ? " &middot; 错误：" + esc(t.error) : ""}
+                ${t.result ? " &middot; " + (t.result.test_passed ? "测试通过" : "测试失败") : ""}
+            </div>
+            ${renderTmuxPanel(t)}
+            ${renderTaskLogs(t)}
+            ${renderAgentMessageForm(t)}
+        </div>
+    `,
+          )
+          .join("");
+        document.querySelectorAll(".agent-message-input").forEach((input) => {
+          input.value = runningDrafts[input.dataset.taskId] || "";
+        });
+        restoreTaskLogScroll();
+      }
+
+      function renderTmuxPanel(task) {
+        if (task.transport !== "tmux") return "";
+        const command =
+          task.tmux_attach_command ||
+          (task.tmux_session ? "tmux attach -t " + task.tmux_session : "");
+        const output = task.tmux_screen || task.tmux_log || "";
+        return `
+        <div class="tmux-panel">
+            ${command ? `<div class="tmux-command">${esc(command)}</div>` : ""}
+            <div class="task-log tmux-log" data-task-id="${esc(task.id)}-tmux" aria-label="tmux 输出">${esc(output || "等待 Claude Code 输出...")}</div>
+        </div>
+    `;
+      }
+
+      function renderTaskLogs(task) {
+        const logs = (task.logs || []).slice(-120);
+        return `
+        <div class="task-log event-log" data-task-id="${esc(task.id)}" aria-label="运行日志">
+            ${
+              logs.length
+                ? logs
+                    .map((log) => {
+                      const label = [
+                        log.ts?.slice(11, 19),
+                        log.agent,
+                        log.event,
+                      ]
+                        .filter(Boolean)
+                        .join(" ");
+                      const message = log.message || log.type || "";
+                      return `<div class="log-line ${esc(log.type)}"><span class="log-prefix">${esc(label)}</span>${esc(message)}</div>`;
+                    })
+                    .join("")
+                : '<div class="log-line">等待运行日志...</div>'
+            }
+        </div>
+    `;
+      }
+
+      function renderAgentMessageForm(task) {
+        const active = task.status === "pending" || task.status === "running";
+        if (!active) return "";
+        const placeholder =
+          task.transport === "tmux"
+            ? "输入消息，发送到 tmux 中的 Claude Code..."
+            : "输入消息，打断当前 agent 并接入当前 Claude 会话...";
+        return `
+        <form class="agent-message-form" data-task-id="${esc(task.id)}">
+            <textarea class="agent-message-input" data-task-id="${esc(task.id)}" rows="1" placeholder="${placeholder}"></textarea>
+            <button type="submit" class="btn btn-primary">发送</button>
+        </form>
+    `;
+      }
+
+      $("running-list").addEventListener("keydown", (e) => {
+        const input = e.target.closest(".agent-message-input");
+        if (!input || e.key !== "Enter" || e.shiftKey || e.isComposing) return;
+        e.preventDefault();
+
+        const form = input.closest(".agent-message-form");
+        if (!form) return;
+        if (form.requestSubmit) {
+          form.requestSubmit();
+        } else {
+          form.dispatchEvent(
+            new Event("submit", { bubbles: true, cancelable: true }),
+          );
+        }
+      });
+
+      $("running-list").addEventListener("submit", async (e) => {
+        const form = e.target.closest(".agent-message-form");
+        if (!form) return;
+        e.preventDefault();
+
+        const input = form.querySelector(".agent-message-input");
+        const message = input.value.trim();
+        if (!message) return;
+
+        const btn = form.querySelector("button");
+        btn.disabled = true;
+        runningDrafts[form.dataset.taskId] = "";
+        input.value = "";
+        try {
+          const res = await api(
+            "running/" + encodeURIComponent(form.dataset.taskId) + "/message",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ message }),
+            },
+          );
+          if (res.error) {
+            runningDrafts[form.dataset.taskId] = message;
+            input.value = message;
+            alert(res.error);
+            return;
+          }
+          await loadRunning();
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      async function stopTask(taskId) {
+        const res = await api(
+          "running/" + encodeURIComponent(taskId) + "/stop",
+          {
+            method: "POST",
+          },
+        );
+        if (res.error) {
+          alert(res.error);
+          return false;
+        }
+        return true;
+      }
+
+      $("running-list").addEventListener("click", async (e) => {
+        const btn = e.target.closest(".stop-task-btn");
+        if (!btn) return;
+        btn.disabled = true;
+        btn.textContent = "停止中";
+        await stopTask(btn.dataset.taskId);
+        await loadRunning();
+      });
+
+      async function loadTrajectories() {
+        const rows = await api("trajectories");
+        const body = $("trajectories-body");
+        const empty = $("trajectories-empty");
+        if (!rows.length) {
+          body.innerHTML = "";
+          empty.style.display = "";
+          return;
+        }
+        empty.style.display = "none";
+        body.innerHTML = rows
+          .map(
+            (r) => `
+        <tr>
+            <td>${esc(r.id)}</td>
+            <td>${esc(r.workflow_name)}</td>
+            <td>${esc(r.task_description?.slice(0, 50))}</td>
+            <td>${outcomeBadge(r.outcome)}</td>
+            <td style="color:var(--text-dim);font-size:12px">${esc(r.started_at?.slice(0, 19).replace("T", " "))}</td>
+            <td><a href="#" onclick="showDetail('${r.id}');return false;" style="color:var(--primary);font-size:12px">详情</a></td>
+        </tr>
+    `,
+          )
+          .join("");
+      }
+
+      async function showDetail(id) {
+        const t = await api("trajectories/" + id);
+        if (t.error) {
+          alert(t.error);
+          return;
+        }
+        const steps = (t.steps || [])
+          .map(
+            (s, i) => `
+        <li>
+            <strong>${i + 1}. [${esc(s.node_name)}]</strong>
+            ${s.success ? badge("成功", "success") : badge("失败", "danger")}
+            &middot; ${s.duration_ms}ms
+            ${s.tokens_used ? " &middot; " + s.tokens_used + " token" : ""}
+            <br><span style="color:var(--text-dim)">输入：${esc(s.input_summary?.slice(0, 80))}</span>
+            <br><span style="color:var(--text-dim)">输出：${esc(s.output_summary?.slice(0, 80))}</span>
+        </li>
+    `,
+          )
+          .join("");
+        $("modal-body").innerHTML = `
+        <div class="field"><div class="field-label">工作流</div>${esc(t.workflow_name)}</div>
+        <div class="field"><div class="field-label">任务</div>${esc(t.task_description)}</div>
+        <div class="field"><div class="field-label">结果</div>${outcomeBadge(t.outcome)}</div>
+        <div class="field"><div class="field-label">时间</div>${esc(t.started_at)} → ${esc(t.completed_at)}</div>
+        <div class="field"><div class="field-label">步骤（${(t.steps || []).length}）</div>
+            <ul class="step-list">${steps || '<li style="color:var(--text-dim)">没有记录步骤</li>'}</ul>
+        </div>
+    `;
+        $("detail-modal").classList.add("show");
+      }
+
+      $("modal-close").addEventListener("click", () =>
+        $("detail-modal").classList.remove("show"),
+      );
+      $("detail-modal").addEventListener("click", (e) => {
+        if (e.target === $("detail-modal"))
+          $("detail-modal").classList.remove("show");
+      });
+
+      async function loadWorkflows() {
+        const rows = await api("workflows");
+        const body = $("workflows-body");
+        const empty = $("workflows-empty");
+        if (!rows.length) {
+          body.innerHTML = "";
+          empty.style.display = "";
+          return;
+        }
+        empty.style.display = "none";
+        body.innerHTML = rows
+          .map(
+            (r) => `
+        <tr>
+            <td style="font-weight:500">${esc(r.name)}</td>
+            <td>${r.nodes}</td>
+            <td style="color:var(--text-dim)">${esc(r.description)}</td>
+        </tr>
+    `,
+          )
+          .join("");
+      }
+
+      function esc(s) {
+        if (!s) return "";
+        const d = document.createElement("div");
+        d.textContent = String(s);
+        return d.innerHTML;
+      }
+
+      // Auto-refresh running page
+      setInterval(() => {
+        if (
+          $("page-running").classList.contains("active") &&
+          !document.activeElement?.classList.contains("agent-message-input")
+        ) {
+          loadRunning();
+        }
+      }, 1000);
+
+      // Init
+      loadWorkflowOptions();
+      loadDefaultRepoPath();
+    </script>
+  </body>
+</html>
