@@ -18,7 +18,7 @@ class TesterAgent(BaseAgent):
                 "from the outside. They are separate from any test files the task may require as "
                 "deliverables (which the coder creates as part of source code).\n\n"
                 "## Workflow\n"
-                "1. Read the test cases from the planner's output.\n"
+                "1. Read the test cases from the planner's output and referenced files under test-cases/api-tests/.\n"
                 "2. If the test cases specify a service startup command, start the service first.\n"
                 "3. Create a single pytest test file (test_verify.py) in the task directory.\n"
                 "4. Run pytest and collect results.\n"
@@ -63,6 +63,7 @@ class TesterAgent(BaseAgent):
         prompt += (
             "Follow these steps:\n"
             "1. If the test cases specify a service startup command, start the service from the worktree.\n"
+            "   Read referenced non-UI case files from test-cases/api-tests/ in the source worktree.\n"
             "2. Create pytest test files in the task directory based on the test cases.\n"
             "3. Run pytest and collect results.\n"
             "4. Stop any services you started.\n"

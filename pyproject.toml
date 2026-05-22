@@ -19,6 +19,11 @@ dependencies = [
     "rich>=13.7",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pyright>=1.1.409",
+]
+
 [project.scripts]
 evo = "evo.main:main"
 

@@ -34,8 +34,9 @@ class UiTesterAgent(BaseAgent):
             "## Paths\n"
             f"- Task directory: {state.get('task_dir', '')}\n"
             f"- Source worktree: {state.get('worktree_path', '')}\n\n"
-            "Run browser UI verification using the hephaestus-ui-test skill if UI cases exist or the "
-            "planner requested UI verification. If there is no UI surface or no UI test case scope, "
+            "Run browser UI verification using the hephaestus-ui-test skill if UI cases exist, "
+            "if files are referenced under test-cases/ui-tests/, or if the planner requested UI verification. "
+            "If there is no UI surface or no UI test case scope, "
             "return RESULT: PASS and explain that UI testing was skipped. Do not run API tests."
         )
         agent_response = await self.invoke_agent(prompt)

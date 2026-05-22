@@ -1,9 +1,8 @@
 import asyncio
 import json
 import os
-import tempfile
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 from typing import Any
 
 from evo.agents.base import AgentConfig, BaseAgent
@@ -16,92 +15,106 @@ class DummyAgent(BaseAgent):
 
 
 class FixedUuid:
-    hex = "abc12345deadbeef"
+    def __str__(self):
+        return "00000000-0000-4000-8000-000000000000"
+
+
+class FakeStream:
+    def __init__(self, lines: list[bytes]):
+        self.lines = list(lines)
+
+    async def readline(self):
+        if self.lines:
+            return self.lines.pop(0)
+        return b""
+
+
+class FakeStdin:
+    def __init__(self):
+        self.data = b""
+        self.closed = False
+
+    def write(self, data: bytes):
+        self.data += data
+
+    async def drain(self):
+        return None
+
+    def close(self):
+        self.closed = True
+
+
+class FakeProcess:
+    def __init__(self, stdout_lines: list[bytes], stderr_lines: list[bytes] | None = None, returncode: int = 0):
+        self.stdin = FakeStdin()
+        self.stdout = FakeStream(stdout_lines)
+        self.stderr = FakeStream(stderr_lines or [])
+        self.returncode = returncode
+        self.terminated = False
+
+    async def wait(self):
+        return self.returncode
+
+    def terminate(self):
+        self.terminated = True
+        self.returncode = -15
+
+    def kill(self):
+        self.terminated = True
+        self.returncode = -9
 
 
 class BaseAgentTests(unittest.TestCase):
-    def test_invoke_agent_uses_tmux_transport_and_completion_marker(self):
+    def _result_line(self, result: str = "final answer", session_id: str = "session-123") -> bytes:
+        return (json.dumps({
+            "type": "result",
+            "result": result,
+            "session_id": session_id,
+            "num_turns": 2,
+            "total_cost_usd": 0.01,
+            "usage": {"output_tokens": 7},
+        }) + "\n").encode("utf-8")
+
+    def test_invoke_agent_uses_direct_stream_json_transport(self):
         seen: dict[str, Any] = {}
-        sent_text: list[tuple[str, str]] = []
+        process = FakeProcess([self._result_line()])
 
-        def fake_start(session_id, cmd, log_dir, cwd=""):
-            seen["session_id"] = session_id
-            seen["cmd"] = cmd
-            seen["log_dir"] = log_dir
-            seen["cwd"] = cwd
-            return {
-                "session": "evo-dummy-abc12345",
-                "log_path": "/tmp/evo-dummy-abc12345.log",
-                "cwd": cwd,
-                "attach_command": "tmux attach -t evo-dummy-abc12345",
-            }
-
-        def fake_send_text(session, text):
-            sent_text.append((session, text))
+        async def fake_create_subprocess_exec(*cmd, **kwargs):
+            seen["cmd"] = list(cmd)
+            seen["kwargs"] = kwargs
+            return process
 
         with patch.dict(os.environ, {"CLAUDE_CODE_BIN": "/bin/claude-fake"}), patch(
             "evo.agents.base.uuid.uuid4", return_value=FixedUuid()
-        ), patch("evo.agents.base.start_command_session", fake_start), patch(
-            "evo.agents.base.tmux_send_text", fake_send_text
-        ), patch(
-            "evo.agents.base.read_log_tail",
-            side_effect=[("", 0), ("final answer\nEVO_AGENT_DONE_abc12345\n", 32)],
-        ), patch(
-            "evo.agents.base.tmux_capture_pane",
-            side_effect=[
-                "Claude Code v2.1.144\n❯\n⏵⏵ bypass permissions on",
-                "final answer",
-            ],
-        ), patch(
-            "evo.agents.base.tmux_session_exists", return_value=True
-        ), patch(
-            "evo.agents.base.asyncio.sleep", new_callable=AsyncMock
-        ):
+        ), patch("evo.agents.claude_code.asyncio.create_subprocess_exec", fake_create_subprocess_exec):
             agent = DummyAgent(AgentConfig(name="dummy", role="test"))
             response = asyncio.run(agent.invoke_agent("hello from prompt"))
 
         self.assertEqual(response.text, "final answer")
-        self.assertEqual(response.session_id, "evo-dummy-abc12345")
-        self.assertEqual(seen["session_id"], "dummy-abc12345")
+        self.assertEqual(response.session_id, "session-123")
+        self.assertEqual(response.tokens_used, 7)
+        self.assertEqual(response.num_turns, 2)
         self.assertIn("/bin/claude-fake", seen["cmd"])
-        self.assertIn("--permission-mode", seen["cmd"])
+        self.assertNotIn("--print", seen["cmd"])
+        self.assertIn("--output-format", seen["cmd"])
+        self.assertIn("--input-format", seen["cmd"])
+        self.assertIn("--permission-prompt-tool", seen["cmd"])
+        self.assertIn("stream-json", seen["cmd"])
         self.assertNotIn("hello from prompt", " ".join(seen["cmd"]))
-        self.assertEqual(sent_text[0][0], "evo-dummy-abc12345")
-        self.assertIn("hello from prompt", sent_text[0][1])
-        self.assertIn("EVO_AGENT_DONE_abc12345", sent_text[0][1])
+        sent = json.loads(process.stdin.data.decode("utf-8"))
+        self.assertEqual(sent["type"], "user")
+        self.assertEqual(sent["message"]["role"], "user")
+        self.assertEqual(sent["message"]["content"], "hello from prompt")
 
     def test_invoke_agent_prefixes_configured_skill_commands(self):
-        sent_text: list[tuple[str, str]] = []
+        process = FakeProcess([self._result_line()])
 
-        def fake_start(session_id, cmd, log_dir, cwd=""):
-            return {
-                "session": "evo-dummy-abc12345",
-                "log_path": "/tmp/evo-dummy-abc12345.log",
-                "cwd": cwd,
-                "attach_command": "tmux attach -t evo-dummy-abc12345",
-            }
-
-        def fake_send_text(session, text):
-            sent_text.append((session, text))
+        async def fake_create_subprocess_exec(*cmd, **kwargs):
+            return process
 
         with patch.dict(os.environ, {"CLAUDE_CODE_BIN": "/bin/claude-fake"}), patch(
             "evo.agents.base.uuid.uuid4", return_value=FixedUuid()
-        ), patch("evo.agents.base.start_command_session", fake_start), patch(
-            "evo.agents.base.tmux_send_text", fake_send_text
-        ), patch(
-            "evo.agents.base.read_log_tail",
-            side_effect=[("", 0), ("final answer\nEVO_AGENT_DONE_abc12345\n", 32)],
-        ), patch(
-            "evo.agents.base.tmux_capture_pane",
-            side_effect=[
-                "Claude Code v2.1.144\n❯\n⏵⏵ bypass permissions on",
-                "final answer",
-            ],
-        ), patch(
-            "evo.agents.base.tmux_session_exists", return_value=True
-        ), patch(
-            "evo.agents.base.asyncio.sleep", new_callable=AsyncMock
-        ):
+        ), patch("evo.agents.claude_code.asyncio.create_subprocess_exec", fake_create_subprocess_exec):
             agent = DummyAgent(AgentConfig(
                 name="dummy",
                 role="test",
@@ -109,25 +122,11 @@ class BaseAgentTests(unittest.TestCase):
             ))
             asyncio.run(agent.invoke_agent("hello from prompt"))
 
-        self.assertTrue(sent_text)
-        submitted = sent_text[0][1]
-        self.assertTrue(submitted.startswith("/browser:browser\n/imagegen\n\nhello from prompt"))
-
-    def test_extract_tmux_result_ignores_echoed_prompt_marker(self):
-        transcript = (
-            "hello from prompt\n\n"
-            "When this agent step is complete, print the final result needed by the Evo workflow, "
-            "then print this exact completion marker on its own line:\n"
-            "EVO_AGENT_DONE_abc12345\n"
-            "Do not print the completion marker until the step is actually complete.\n"
-            "RESULT: FAIL\n\n"
-            "test_example failed: expected 2, got 3\n"
-            "EVO_AGENT_DONE_abc12345\n"
+        sent = json.loads(process.stdin.data.decode("utf-8"))
+        self.assertEqual(
+            sent["message"]["content"],
+            "/browser:browser\n/imagegen\n\nhello from prompt",
         )
-
-        result = DummyAgent._extract_tmux_result(transcript, "EVO_AGENT_DONE_abc12345")
-
-        self.assertEqual(result, "RESULT: FAIL\n\ntest_example failed: expected 2, got 3")
 
     def test_build_cli_command_can_resume_persisted_session(self):
         with patch.dict(os.environ, {"CLAUDE_CODE_BIN": "/bin/claude-fake"}):
@@ -139,113 +138,28 @@ class BaseAgentTests(unittest.TestCase):
         self.assertNotIn("--session-id", cmd)
         self.assertNotIn("--no-session-persistence", cmd)
 
-    def test_invoke_agent_emits_tmux_task_update(self):
+    def test_invoke_agent_emits_start_and_end_events(self):
         events: list[dict[str, Any]] = []
+        process = FakeProcess([self._result_line("ok")])
 
-        def fake_start(session_id, cmd, log_dir, cwd=""):
-            return {
-                "session": "evo-dummy-abc12345",
-                "log_path": "/tmp/evo-dummy-abc12345.log",
-                "cwd": cwd,
-                "attach_command": "tmux attach -t evo-dummy-abc12345",
-            }
+        async def fake_create_subprocess_exec(*cmd, **kwargs):
+            return process
 
         token = set_event_callback(events.append)
         try:
             with patch.dict(os.environ, {"CLAUDE_CODE_BIN": "/bin/claude-fake"}), patch(
                 "evo.agents.base.uuid.uuid4", return_value=FixedUuid()
-            ), patch("evo.agents.base.start_command_session", fake_start), patch(
-                "evo.agents.base.tmux_send_text"
-            ), patch(
-                "evo.agents.base.read_log_tail",
-                return_value=("ok\nEVO_AGENT_DONE_abc12345\n", 24),
-            ), patch(
-                "evo.agents.base.tmux_capture_pane", return_value="ok"
-            ), patch(
-                "evo.agents.base.tmux_session_exists", return_value=True
-            ):
+            ), patch("evo.agents.claude_code.asyncio.create_subprocess_exec", fake_create_subprocess_exec):
                 agent = DummyAgent(AgentConfig(name="dummy", role="test"))
                 response = asyncio.run(agent.invoke_agent("hello"))
         finally:
             reset_event_callback(token)
 
         self.assertEqual(response.text, "ok")
-        task_updates = [event for event in events if event["type"] == "task_update"]
-        self.assertTrue(task_updates)
-        self.assertEqual(task_updates[0]["fields"]["tmux_session"], "evo-dummy-abc12345")
-
-    def test_claude_trust_prompt_detection(self):
-        screen = (
-            "Quick safety check: Is this a project you created or one you trust?\n"
-            "1. Yes, I trust this folder\n"
-            "2. No, exit"
-        )
-
-        self.assertTrue(DummyAgent._is_claude_trust_prompt(screen))
-        self.assertFalse(DummyAgent._is_claude_trust_prompt("Yes, I trust this folder"))
-
-    def test_invoke_agent_accepts_claude_trust_prompt_once(self):
-        sent_keys: list[tuple[str, tuple[str, ...]]] = []
-        sent_text: list[tuple[str, str]] = []
-
-        def fake_start(session_id, cmd, log_dir, cwd=""):
-            return {
-                "session": "evo-dummy-abc12345",
-                "log_path": "/tmp/evo-dummy-abc12345.log",
-                "cwd": cwd,
-                "attach_command": "tmux attach -t evo-dummy-abc12345",
-            }
-
-        def fake_send_keys(session, *keys):
-            sent_keys.append((session, keys))
-
-        def fake_send_text(session, text):
-            sent_text.append((session, text))
-
-        trust_screen = (
-            "Quick safety check: Is this a project you created or one you trust?\n"
-            "1. Yes, I trust this folder\n"
-            "2. No, exit"
-        )
-
-        with tempfile.TemporaryDirectory() as data_dir, tempfile.TemporaryDirectory() as cwd:
-            with patch.dict(os.environ, {"CLAUDE_CODE_BIN": "/bin/claude-fake", "EVO_DATA_DIR": data_dir}), patch(
-                "evo.agents.base.uuid.uuid4", return_value=FixedUuid()
-            ), patch("evo.agents.base.start_command_session", fake_start), patch(
-                "evo.agents.base.tmux_send_keys", fake_send_keys
-            ), patch(
-                "evo.agents.base.tmux_send_text", fake_send_text
-            ), patch(
-                "evo.agents.base.read_log_tail",
-                side_effect=[("", 0), ("", 0), ("final answer\nEVO_AGENT_DONE_abc12345\n", 32)],
-            ), patch(
-                "evo.agents.base.tmux_capture_pane",
-                side_effect=[trust_screen, "Claude Code v2.1.144\n❯\n⏵⏵ bypass permissions on", "final answer"],
-            ), patch(
-                "evo.agents.base.tmux_session_exists", return_value=True
-            ), patch(
-                "evo.agents.base.asyncio.sleep", new_callable=AsyncMock
-            ):
-                agent = DummyAgent(AgentConfig(name="dummy", role="test", cwd=cwd))
-                response = asyncio.run(agent.invoke_agent("hello"))
-                trusted_path = os.path.join(data_dir, "trusted_claude_dirs.json")
-                with open(trusted_path, encoding="utf-8") as f:
-                    trusted = json.load(f)
-
-        self.assertEqual(response.text, "final answer")
-        self.assertEqual(sent_keys, [("evo-dummy-abc12345", ("Enter",))])
-        self.assertEqual(sent_text[0][0], "evo-dummy-abc12345")
-        self.assertIn("hello", sent_text[0][1])
-        self.assertEqual(trusted["directories"], [os.path.realpath(cwd)])
-
-    def test_claude_trusted_dirs_are_keyed_by_resolved_cwd(self):
-        with tempfile.TemporaryDirectory() as data_dir, tempfile.TemporaryDirectory() as cwd:
-            with patch.dict(os.environ, {"EVO_DATA_DIR": data_dir}):
-                self.assertFalse(DummyAgent._is_claude_cwd_trusted(cwd))
-                DummyAgent._mark_claude_cwd_trusted(cwd)
-
-                self.assertTrue(DummyAgent._is_claude_cwd_trusted(cwd))
-                self.assertFalse(DummyAgent._is_claude_cwd_trusted(os.path.dirname(cwd)))
+        event_types = [event["type"] for event in events]
+        self.assertIn("agent_start", event_types)
+        self.assertIn("agent_end", event_types)
+        self.assertNotIn("task_update", event_types)
 
 
 if __name__ == "__main__":

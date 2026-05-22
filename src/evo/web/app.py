@@ -21,16 +21,6 @@ from evo.runtime_events import (
     set_user_message_provider,
 )
 from evo.task import _run_git
-from evo.config import get_data_dir
-from evo.tmux import (
-    TmuxError,
-    capture_pane as tmux_capture_pane,
-    read_log_tail,
-    send_text as tmux_send_text,
-    session_exists as tmux_session_exists,
-    stop_session as tmux_stop_session,
-    tmux_available,
-)
 
 _BASE_DIR = Path(__file__).resolve().parent
 
@@ -135,31 +125,8 @@ def _find_running_entry(task_id: str) -> dict | None:
     return None
 
 
-def _tmux_log_dir() -> Path:
-    path = Path(get_data_dir()) / "tmux_logs"
-    path.mkdir(parents=True, exist_ok=True)
-    return path
-
-
-def _refresh_tmux_entry(entry: dict):
-    if entry.get("transport") != "tmux":
-        return
-
-    session = entry.get("tmux_session", "")
-    alive = bool(session and tmux_session_exists(session))
-    if session and entry.get("status") in _ACTIVE_STATUSES and not alive:
-        entry["status"] = "completed"
-        _append_task_log(str(entry.get("id", "")), {
-            "type": "workflow",
-            "message": "tmux session ended",
-        })
-    entry["tmux_alive"] = alive
-
-    text, size = read_log_tail(entry.get("tmux_log_path", ""))
-    screen = tmux_capture_pane(session) if alive else ""
-    entry["tmux_screen"] = screen
-    entry["tmux_log"] = text
-    entry["tmux_log_size"] = size
+def _refresh_runtime_entry(entry: dict):
+    return
 
 
 def _run_workflow_in_background(task_id: str, task: str, workflow_name: str,
@@ -196,7 +163,7 @@ def _run_workflow_in_background(task_id: str, task: str, workflow_name: str,
                 "current_step": "", "iteration": 0,
                 "max_iterations": max_iterations, "error": "",
                 "_sdk_meta": {}, "_retries": {},
-                "requirements_doc": "", "design_doc": "", "test_cases": "",
+                "requirements_doc": "", "design_doc": "", "existing_test_case_inventory": "", "behavior_specs": "", "test_case_changes": "", "verification_plan": "", "test_cases": "",
                 "user_feedback": "", "task_id": "", "task_name": "",
                 "task_dir": "", "dir_name": "", "worktree_path": "",
                 "repo_path": repo, "repo_branch": branch,
@@ -287,7 +254,7 @@ async def api_repo_branch(path: str = Query(default="")):
 @app.get("/api/running")
 async def api_running():
     for entry in _running_tasks.values():
-        _refresh_tmux_entry(entry)
+        _refresh_runtime_entry(entry)
     return list(_running_tasks.values())
 
 
@@ -313,12 +280,9 @@ async def api_run(request: Request, background_tasks: BackgroundTasks):
         "logs": [],
         "messages": [],
         "stop_requested": False,
-        "transport": "tmux",
+        "transport": "stream-json",
     }
 
-    if not tmux_available():
-        _running_tasks.pop(task_id, None)
-        return JSONResponse({"error": "tmux 未安装或不在 PATH 中"}, status_code=400)
     background_tasks.add_task(
         _run_workflow_in_background, task_id, task, workflow, repo, branch
     )
@@ -339,28 +303,6 @@ async def api_running_message(task_id: str, request: Request):
     if not message:
         return JSONResponse({"error": "消息不能为空"}, status_code=400)
 
-    if entry.get("transport") == "tmux":
-        session = entry.get("tmux_session", "")
-        if not session:
-            return JSONResponse({"error": "当前还没有正在执行的 agent tmux session"}, status_code=400)
-        if not tmux_session_exists(session):
-            return JSONResponse({"error": "当前 agent tmux session 已结束"}, status_code=400)
-        item = {
-            "ts": datetime.now().isoformat(timespec="seconds"),
-            "message": message,
-        }
-        entry.setdefault("messages", []).append(item)
-        try:
-            tmux_send_text(session, message)
-        except TmuxError as e:
-            return JSONResponse({"error": str(e)}, status_code=400)
-        _append_task_log(task_id, {
-            "type": "user_message",
-            "message": message,
-        })
-        _refresh_tmux_entry(entry)
-        return {"ok": True, "message_count": len(entry.get("messages", []))}
-
     item = {
         "ts": datetime.now().isoformat(timespec="seconds"),
         "message": message,
@@ -380,23 +322,6 @@ async def api_running_stop(task_id: str):
         return JSONResponse({"error": "未找到运行中的任务"}, status_code=404)
     if entry.get("status") not in _ACTIVE_STATUSES:
         return JSONResponse({"error": "任务已结束，不能停止"}, status_code=400)
-
-    if entry.get("transport") == "tmux":
-        session = entry.get("tmux_session", "")
-        if session:
-            try:
-                tmux_stop_session(session)
-            except TmuxError as e:
-                return JSONResponse({"error": str(e)}, status_code=400)
-        entry["stop_requested"] = True
-        entry["status"] = "stopping"
-        entry["tmux_alive"] = False
-        _append_task_log(str(entry.get("id", task_id)), {
-            "type": "workflow_stop_requested",
-            "message": "Stop requested",
-        })
-        _refresh_tmux_entry(entry)
-        return {"ok": True, "status": "stopping"}
 
     entry["stop_requested"] = True
     entry["status"] = "stopping"

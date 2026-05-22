@@ -88,6 +88,14 @@ class WorkflowConfigTests(unittest.TestCase):
 
         self.assertIn("env_config", config.get("workflows", {}))
 
+    def test_default_workflow_keeps_planner_before_confirm(self):
+        config = load_config()
+        workflow = config["workflows"]["plan_code_test"]
+        node_names = [node["name"] for node in workflow["nodes"]]
+
+        self.assertNotIn("verification_plan", node_names)
+        self.assertLess(node_names.index("plan"), node_names.index("confirm"))
+
 
 if __name__ == "__main__":
     unittest.main()

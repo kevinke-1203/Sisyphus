@@ -1,31 +1,15 @@
 """Base agent class for all Evo agents."""
 
-import asyncio
-import contextlib
-import json
 import os
-import shutil
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
 
-from evo.config import get_data_dir
+from evo.agents.claude_code import ClaudeCodeClient, ClaudeCodeEvent, ClaudeCodeOptions
 from evo.runtime_events import WorkflowCancelled, emit_event, get_user_messages, is_cancel_requested
-from evo.tmux import (
-    TmuxError,
-    capture_pane as tmux_capture_pane,
-    read_log_tail,
-    send_keys as tmux_send_keys,
-    send_text as tmux_send_text,
-    session_exists as tmux_session_exists,
-    start_command_session,
-    stop_session as tmux_stop_session,
-)
-
 load_dotenv()
 
 
@@ -83,43 +67,24 @@ class BaseAgent(ABC):
         except Exception:
             return base
 
+    def _build_claude_client(self) -> ClaudeCodeClient:
+        return ClaudeCodeClient(ClaudeCodeOptions(
+            agent_name=self.config.name,
+            cwd=self.config.cwd,
+            model=self.config.model,
+            system_prompt=self._get_system_prompt(),
+            permission_mode=self.config.permission_mode,
+            allowed_tools=self.config.allowed_tools,
+            max_budget_usd=self.config.max_budget_usd,
+        ))
+
     def _build_cli_command(self, session_id: str = "", resume: bool = False) -> list[str]:
-        """Build a Claude Code CLI command from agent config and environment."""
-        claude_bin = os.getenv("CLAUDE_CODE_BIN") or shutil.which("claude")
-        if not claude_bin:
-            raise RuntimeError("Claude Code CLI not found. Install `claude` or set CLAUDE_CODE_BIN.")
-
-        cmd = [
-            claude_bin,
-            "--print",
-            "--output-format",
-            "stream-json",
-            "--system-prompt",
-            self._get_system_prompt(),
-            "--permission-mode",
-            self.config.permission_mode,
-            "--include-partial-messages",
-            "--verbose",
-        ]
-
-        if resume and session_id:
-            cmd.extend(["--resume", session_id])
-        elif session_id:
-            cmd.extend(["--session-id", session_id])
-
-        if self.config.allowed_tools:
-            cmd.extend(["--allowedTools", ",".join(self.config.allowed_tools)])
-        else:
-            cmd.extend(["--tools", ""])
-
-        if self.config.max_budget_usd is not None:
-            cmd.extend(["--max-budget-usd", str(self.config.max_budget_usd)])
-
-        return cmd
+        """Build a Claude Code CLI command using bidirectional stream-json stdio."""
+        return self._build_claude_client().build_command(session_id=session_id, resume=resume)
 
     def _build_cli_env(self) -> dict[str, str]:
         """Build the environment for Claude Code CLI execution."""
-        return os.environ.copy()
+        return self._build_claude_client().build_env()
 
     @staticmethod
     def _normalize_skill_command(skill: str) -> str:
@@ -140,77 +105,6 @@ class BaseAgent(ABC):
             return prompt
         return "\n".join(commands) + "\n\n" + prompt
 
-    def _build_interactive_cli_command(self) -> list[str]:
-        """Build an interactive Claude Code CLI command for tmux transport."""
-        claude_bin = os.getenv("CLAUDE_CODE_BIN") or shutil.which("claude")
-        if not claude_bin:
-            raise RuntimeError("Claude Code CLI not found. Install `claude` or set CLAUDE_CODE_BIN.")
-
-        cmd = [
-            claude_bin,
-            "--system-prompt",
-            self._get_system_prompt(),
-            "--permission-mode",
-            self.config.permission_mode,
-        ]
-        if self.config.allowed_tools:
-            cmd.extend(["--allowedTools", ",".join(self.config.allowed_tools)])
-        else:
-            cmd.extend(["--tools", ""])
-        if self.config.max_budget_usd is not None:
-            cmd.extend(["--max-budget-usd", str(self.config.max_budget_usd)])
-        return cmd
-
-    @staticmethod
-    def _is_claude_trust_prompt(screen: str) -> bool:
-        return (
-            "Quick safety check: Is this a project you created or one you trust?" in screen
-            and "Yes, I trust this folder" in screen
-            and "No, exit" in screen
-        )
-
-    @staticmethod
-    def _is_claude_ready_prompt(screen: str) -> bool:
-        return "Claude Code v" in screen and "❯" in screen and not BaseAgent._is_claude_trust_prompt(screen)
-
-    @staticmethod
-    def _resolve_cwd(cwd: str | None = None) -> str:
-        return str(Path(cwd or os.getcwd()).expanduser().resolve())
-
-    @staticmethod
-    def _trusted_claude_dirs_path() -> str:
-        return os.path.join(get_data_dir(), "trusted_claude_dirs.json")
-
-    @classmethod
-    def _load_trusted_claude_dirs(cls) -> set[str]:
-        path = cls._trusted_claude_dirs_path()
-        if not os.path.isfile(path):
-            return set()
-        try:
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
-        except (OSError, json.JSONDecodeError):
-            return set()
-        if not isinstance(data, dict):
-            return set()
-        dirs = data.get("directories", [])
-        if not isinstance(dirs, list):
-            return set()
-        return {str(item) for item in dirs if isinstance(item, str)}
-
-    @classmethod
-    def _is_claude_cwd_trusted(cls, cwd: str) -> bool:
-        return cls._resolve_cwd(cwd) in cls._load_trusted_claude_dirs()
-
-    @classmethod
-    def _mark_claude_cwd_trusted(cls, cwd: str):
-        trusted = cls._load_trusted_claude_dirs()
-        trusted.add(cls._resolve_cwd(cwd))
-        path = cls._trusted_claude_dirs_path()
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"directories": sorted(trusted)}, f, ensure_ascii=False, indent=2)
-
     @staticmethod
     def _format_user_messages(user_messages: list[dict[str, Any]]) -> str:
         formatted_messages = []
@@ -227,343 +121,124 @@ class BaseAgent(ABC):
             + "\n".join(formatted_messages or ["- Continue."])
         )
 
-    @staticmethod
-    async def _terminate_process(process: asyncio.subprocess.Process):
-        if process.returncode is not None:
+    async def invoke_agent(self, prompt: str) -> AgentResponse:
+        """Call Claude Code CLI through the bidirectional stream-json protocol."""
+        return await self._invoke_agent_stream_json(prompt)
+
+    def _emit_claude_event(self, event: ClaudeCodeEvent):
+        if event.session_id and not event.content:
+            emit_event({
+                "type": "agent_output",
+                "agent": self.config.name,
+                "event": event.type,
+                "session_id": event.session_id,
+                "message": "",
+            })
             return
-        if hasattr(process, "terminate"):
-            process.terminate()
-        try:
-            await asyncio.wait_for(process.wait(), timeout=5)
-        except asyncio.TimeoutError:
-            if hasattr(process, "kill"):
-                process.kill()
-            await process.wait()
 
-    @staticmethod
-    def _extract_stream_text(payload: dict[str, Any]) -> str:
-        """Extract useful display text from a Claude Code stream-json event."""
-        if isinstance(payload.get("result"), str):
-            return payload["result"]
-        if isinstance(payload.get("text"), str):
-            return payload["text"]
+        if event.type == "tool_use":
+            message = f"[tool] {event.tool_name}"
+            if event.tool_input:
+                message = f"{message}: {event.tool_input}"
+        elif event.type == "permission_request":
+            message = f"[permission denied] {event.tool_name}: {event.tool_input}"
+        else:
+            message = event.content
 
-        message = payload.get("message")
-        if isinstance(message, dict):
-            content = message.get("content")
-            if isinstance(content, str):
-                return content
-            if isinstance(content, list):
-                parts = []
-                for item in content:
-                    if not isinstance(item, dict):
-                        continue
-                    if isinstance(item.get("text"), str):
-                        parts.append(item["text"])
-                    elif isinstance(item.get("input"), dict):
-                        parts.append(json.dumps(item["input"], ensure_ascii=False))
-                    elif isinstance(item.get("name"), str):
-                        parts.append(f"[tool] {item['name']}")
-                return "\n".join(parts)
+        if message:
+            emit_event({
+                "type": "agent_output",
+                "agent": self.config.name,
+                "event": event.type,
+                "message": message,
+            })
 
-        delta = payload.get("delta")
-        if isinstance(delta, dict):
-            if isinstance(delta.get("text"), str):
-                return delta["text"]
-            if isinstance(delta.get("partial_json"), str):
-                return delta["partial_json"]
-
-        return ""
-
-    async def _read_stream(
+    async def _read_claude_turn(
         self,
-        process: asyncio.subprocess.Process,
+        session,
         interrupt_after_message_count: int | None = None,
-    ) -> tuple[str, str, int, float, int, bool, str, bool]:
-        """Read Claude Code stream-json output while emitting progress events."""
-        output_lines: list[str] = []
+    ) -> tuple[str, int, float, int, bool, str, bool]:
         text_parts: list[str] = []
-        stderr_parts: list[str] = []
         final_result = ""
         tokens = 0
         cost = 0.0
         turns = 0
         is_error = False
-        session_id = ""
+        session_id = session.session_id
         interrupted = False
+        saw_result = False
 
-        async def read_stderr():
-            if process.stderr is None:
-                return
-            while True:
-                line = await process.stderr.readline()
-                if not line:
-                    break
-                text = line.decode("utf-8", errors="replace").rstrip()
-                if text:
-                    stderr_parts.append(text)
+        while True:
+            try:
+                event = await session.read_event_with_interrupt(timeout=0.5)
+            except TimeoutError:
+                event = None
+
+            if event is None:
+                if (
+                    interrupt_after_message_count is not None
+                    and len(get_user_messages()) > interrupt_after_message_count
+                ):
+                    interrupted = True
                     emit_event({
-                        "type": "agent_stderr",
+                        "type": "agent_interrupt",
                         "agent": self.config.name,
-                        "message": text,
+                        "message": "User message received; interrupting current agent run",
                     })
-
-        stderr_task = asyncio.create_task(read_stderr())
-
-        if process.stdout is not None:
-            while True:
-                line_task = asyncio.create_task(process.stdout.readline())
-                while True:
-                    done, _pending = await asyncio.wait({line_task}, timeout=0.5)
-                    if done:
-                        line = line_task.result()
-                        break
-                    if (
-                        interrupt_after_message_count is not None
-                        and len(get_user_messages()) > interrupt_after_message_count
-                    ):
-                        interrupted = True
-                        line_task.cancel()
-                        with contextlib.suppress(asyncio.CancelledError):
-                            await line_task
-                        emit_event({
-                            "type": "agent_interrupt",
-                            "agent": self.config.name,
-                            "message": "User message received; interrupting current agent run",
-                        })
-                        await self._terminate_process(process)
-                        break
-                    if is_cancel_requested():
-                        line_task.cancel()
-                        with contextlib.suppress(asyncio.CancelledError):
-                            await line_task
-                        emit_event({
-                            "type": "agent_cancel",
-                            "agent": self.config.name,
-                            "message": "Stop requested; terminating current agent run",
-                        })
-                        await self._terminate_process(process)
-                        raise WorkflowCancelled("任务已停止")
-                if interrupted:
+                    await session.close()
                     break
-                if not line:
-                    break
-                raw = line.decode("utf-8", errors="replace").rstrip()
-                if not raw:
-                    continue
-                output_lines.append(raw)
-
-                try:
-                    payload = json.loads(raw)
-                except json.JSONDecodeError:
-                    text_parts.append(raw)
+                if is_cancel_requested():
                     emit_event({
-                        "type": "agent_output",
+                        "type": "agent_cancel",
                         "agent": self.config.name,
-                        "message": raw,
+                        "message": "Stop requested; terminating current agent run",
                     })
-                    continue
+                    await session.close()
+                    raise WorkflowCancelled("任务已停止")
+                continue
 
-                event_type = str(payload.get("type") or "event")
-                if event_type == "result" and isinstance(payload.get("result"), str):
-                    final_result = payload["result"]
+            if event.type == "eof":
+                break
 
-                message = self._extract_stream_text(payload)
-                if message:
-                    if event_type != "result":
-                        text_parts.append(message)
-                    emit_event({
-                        "type": "agent_output",
-                        "agent": self.config.name,
-                        "event": event_type,
-                        "message": message,
-                    })
-                if event_type == "result" or payload.get("result") is not None:
-                    cost = float(payload.get("total_cost_usd") or payload.get("cost_usd") or cost)
-                    turns = int(payload.get("num_turns") or turns)
-                    is_error = bool(payload.get("is_error", is_error))
-                    session_id = payload.get("session_id", session_id)
-                    usage = payload.get("usage") or {}
-                    tokens = int(
-                        usage.get("output_tokens")
-                        or usage.get("total_tokens")
-                        or payload.get("tokens_used")
-                        or tokens
-                    )
+            self._emit_claude_event(event)
+            if event.session_id:
+                session_id = event.session_id
+            if event.type in {"text", "thinking"} and event.content:
+                text_parts.append(event.content)
+            if event.type == "result":
+                final_result = event.content
+                tokens = event.output_tokens
+                cost = event.cost_usd
+                turns = event.num_turns
+                is_error = event.is_error
+                saw_result = True
+                break
 
-        await stderr_task
-        await process.wait()
+        if not interrupted:
+            if saw_result:
+                await session.close()
+            else:
+                await session.wait()
 
         result_text = final_result.strip() or "\n".join(part for part in text_parts if part).strip()
-        if not result_text:
-            result_text = "\n".join(output_lines).strip()
-
-        error_output = "\n".join(stderr_parts).strip()
-        if process.returncode != 0 and not result_text:
-            result_text = error_output
-        elif process.returncode != 0 and error_output:
-            result_text = f"{result_text}\n\n[claude stderr]\n{error_output}"
-
-        return result_text, error_output, tokens, cost, turns, is_error, session_id, interrupted
-
-    async def invoke_agent(self, prompt: str) -> AgentResponse:
-        """Call Claude Code CLI through a tmux-backed interactive session."""
-        return await self._invoke_agent_tmux(prompt)
-
-    async def _invoke_agent_tmux(self, prompt: str) -> AgentResponse:
-        cwd = self.config.cwd or None
-        execution_cwd = self._resolve_cwd(cwd)
-        run_id = uuid.uuid4().hex[:8]
-        sentinel = f"EVO_AGENT_DONE_{run_id}"
-        session_key = f"{self.config.name}-{run_id}"
-        log_dir = os.path.join(get_data_dir(), "tmux_logs")
-        session_id = ""
-        log_path = ""
-
-        prepared_prompt = self._apply_skill_commands(prompt).rstrip()
-        wrapped_prompt = (
-            f"{prepared_prompt}\n\n"
-            "When this agent step is complete, print the final result needed by the Evo workflow, "
-            f"then print this exact completion marker on its own line:\n{sentinel}\n"
-            "Do not print the completion marker until the step is actually complete."
-        )
-
-        emit_event({
-            "type": "agent_start",
-            "agent": self.config.name,
-            "message": f"Starting {self.config.name}",
-        })
-        try:
-            session = start_command_session(
-                session_key,
-                self._build_interactive_cli_command(),
-                log_dir,
-                cwd=execution_cwd,
-            )
-            session_id = session["session"]
-            log_path = session["log_path"]
-            emit_event({
-                "type": "task_update",
-                "fields": {
-                    "transport": "tmux",
-                    "tmux_session": session_id,
-                    "tmux_log_path": log_path,
-                    "tmux_cwd": session["cwd"],
-                    "tmux_attach_command": session["attach_command"],
-                    "tmux_alive": True,
-                },
-            })
-            emit_event({
-                "type": "agent_output",
-                "agent": self.config.name,
-                "message": f"tmux session: {session['attach_command']}",
-            })
-            last_screen = ""
-            trust_prompt_accepted = False
-            prompt_sent = False
-            while True:
-                if is_cancel_requested():
-                    tmux_stop_session(session_id)
-                    raise WorkflowCancelled("任务已停止")
-
-                log_text, _size = read_log_tail(log_path, max_bytes=200000)
-                screen = tmux_capture_pane(session_id)
-                if screen and screen != last_screen:
-                    last_screen = screen
-                    emit_event({
-                        "type": "task_update",
-                        "fields": {
-                            "tmux_screen": screen,
-                            "tmux_alive": tmux_session_exists(session_id),
-                        },
-                    })
-                if not trust_prompt_accepted and self._is_claude_trust_prompt(screen):
-                    trust_prompt_accepted = True
-                    known_trusted = self._is_claude_cwd_trusted(execution_cwd)
-                    tmux_send_keys(session_id, "Enter")
-                    self._mark_claude_cwd_trusted(execution_cwd)
-                    message = "Accepted Claude Code workspace trust prompt for known directory."
-                    if not known_trusted:
-                        message = "Accepted Claude Code workspace trust prompt and remembered this directory."
-                    emit_event({
-                        "type": "agent_output",
-                        "agent": self.config.name,
-                        "message": message,
-                    })
-                if not prompt_sent and self._is_claude_ready_prompt(screen):
-                    prompt_sent = True
-                    tmux_send_text(session_id, wrapped_prompt)
-                    emit_event({
-                        "type": "agent_output",
-                        "agent": self.config.name,
-                        "message": "Submitted prompt to Claude Code tmux session.",
-                    })
-                if sentinel in log_text or sentinel in screen:
-                    result_text = self._extract_tmux_result(log_text or screen, sentinel)
-                    emit_event({
-                        "type": "agent_end",
-                        "agent": self.config.name,
-                        "message": f"Finished {self.config.name} in {session_id}",
-                        "returncode": 0,
-                    })
-                    return AgentResponse(
-                        text=result_text,
-                        session_id=session_id,
-                    )
-                if not tmux_session_exists(session_id):
-                    result_text = self._extract_tmux_result(log_text or screen, sentinel)
-                    emit_event({
-                        "type": "agent_end",
-                        "agent": self.config.name,
-                        "message": f"Finished {self.config.name} in {session_id}",
-                        "returncode": 0,
-                    })
-                    return AgentResponse(
-                        text=result_text,
-                        session_id=session_id,
-                        is_error=not bool(result_text.strip()),
-                    )
-                await asyncio.sleep(0.8)
-        except TmuxError as e:
-            emit_event({
-                "type": "agent_end",
-                "agent": self.config.name,
-                "message": f"Failed {self.config.name}: {e}",
-                "returncode": 1,
-            })
-            return AgentResponse(text=str(e), is_error=True, session_id=session_id)
-
-    @staticmethod
-    def _extract_tmux_result(text: str, sentinel: str) -> str:
-        clean = text.replace("\r", "")
-        marker = "then print this exact completion marker on its own line:"
-        if marker in clean:
-            before_marker, after_marker = clean.split(marker, 1)
-            after_lines = after_marker.splitlines()
-            for index, line in enumerate(after_lines):
-                if sentinel in line:
-                    result_lines = after_lines[index + 1:]
-                    if result_lines and result_lines[0].startswith("Do not print the completion marker"):
-                        result_lines = result_lines[1:]
-                    clean = "\n".join(result_lines)
-                    break
+        if not saw_result and session.returncode != 0 and session.stderr_text:
+            if result_text:
+                result_text = f"{result_text}\n\n[claude stderr]\n{session.stderr_text}"
             else:
-                clean = before_marker
-        if sentinel in clean:
-            clean = clean.split(sentinel, 1)[0]
-        return clean.strip()
+                result_text = session.stderr_text
+        return result_text, tokens, cost, turns, is_error, session_id, interrupted
 
     async def _invoke_agent_stream_json(self, prompt: str) -> AgentResponse:
         """Call Claude Code CLI and return a structured response."""
-        cwd = self.config.cwd or None
         session_id = str(uuid.uuid4())
         resume = False
         restart_count = 0
         prompt = self._apply_skill_commands(prompt)
+        client = self._build_claude_client()
 
         while True:
             message_count = len(get_user_messages())
-            cmd = self._build_cli_command(session_id=session_id, resume=resume)
+            cmd = client.build_command(session_id=session_id, resume=resume)
 
             if os.getenv("EVO_DEBUG"):
                 print(f"\n[DEBUG] {self.config.name} prompt ({len(prompt)} chars):")
@@ -575,23 +250,16 @@ class BaseAgent(ABC):
                 "agent": self.config.name,
                 "message": f"Starting {self.config.name}",
             })
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                cwd=cwd,
-                env=self._build_cli_env(),
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            if process.stdin is not None:
-                process.stdin.write(prompt.encode("utf-8"))
-                await process.stdin.drain()
-                process.stdin.close()
 
-            result = await self._read_stream(process, interrupt_after_message_count=message_count)
-            result_text, _error_output, tokens, cost, turns, is_error, session_id, interrupted = result
-            if not session_id and "--session-id" in cmd:
-                session_id = cmd[cmd.index("--session-id") + 1]
+            session = await client.start_session(session_id=session_id, resume=resume)
+            await session.send(prompt)
+            await session.drain()
+
+            result = await self._read_claude_turn(session, interrupt_after_message_count=message_count)
+            result_text, tokens, cost, turns, is_error, session_id, interrupted = result
+            if not session_id:
+                session_id = session.session_id
+
             if interrupted and restart_count < 5:
                 restart_count += 1
                 new_messages = get_user_messages()[message_count:]
@@ -601,22 +269,26 @@ class BaseAgent(ABC):
                     "type": "agent_end",
                     "agent": self.config.name,
                     "message": f"Resuming {self.config.name} session with user message",
-                    "returncode": process.returncode,
+                    "returncode": session.returncode,
                 })
                 continue
-            if process.returncode != 0:
+
+            if session.returncode != 0 and not result_text:
                 is_error = True
+            logical_returncode = session.returncode
+            if result_text and session.returncode in {-15, -9}:
+                logical_returncode = 0
             emit_event({
                 "type": "agent_end",
                 "agent": self.config.name,
-                "message": f"Finished {self.config.name} (exit {process.returncode})",
-                "returncode": process.returncode,
+                "message": f"Finished {self.config.name} (exit {logical_returncode})",
+                "returncode": logical_returncode,
             })
 
             if os.getenv("EVO_DEBUG"):
                 print(f"[DEBUG] {self.config.name} response ({len(result_text)} chars):")
                 print(f"  {result_text[:300]}{'...' if len(result_text) > 300 else ''}")
-                print(f"  tokens={tokens}, cost=${cost:.4f}, returncode={process.returncode}\n")
+                print(f"  tokens={tokens}, cost=${cost:.4f}, returncode={logical_returncode}\n")
 
             return AgentResponse(
                 text=result_text,

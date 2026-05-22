@@ -23,6 +23,10 @@ class WorkflowState(TypedDict):
     # Structured planner outputs
     requirements_doc: str
     design_doc: str
+    existing_test_case_inventory: str
+    behavior_specs: str
+    test_case_changes: str
+    verification_plan: str
     test_cases: str
     # User feedback on plan (set by confirm node)
     user_feedback: str

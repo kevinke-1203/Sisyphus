@@ -107,6 +107,10 @@ async def plan_node(state: WorkflowState) -> dict:
     mgr = _get_task_manager()
     mgr.write_artifact(task_dir, "requirements", result.get("requirements_doc", ""))
     mgr.write_artifact(task_dir, "design", result.get("design_doc", ""))
+    mgr.write_artifact(task_dir, "existing_test_case_inventory", result.get("existing_test_case_inventory", ""))
+    mgr.write_artifact(task_dir, "behavior_specs", result.get("behavior_specs", ""))
+    mgr.write_artifact(task_dir, "test_case_changes", result.get("test_case_changes", ""))
+    mgr.write_artifact(task_dir, "verification_plan", result.get("verification_plan", ""))
     mgr.write_artifact(task_dir, "test_cases", result.get("test_cases", ""))
 
     return result
@@ -131,6 +135,13 @@ def confirm_node(state: WorkflowState) -> dict:
     print(f"{'='*60}")
     print(requirements)
     print(f"{'='*60}")
+    verification_plan = state.get("verification_plan", "")
+    if verification_plan:
+        print(f"\n{'='*60}")
+        print("[Confirm] Verification Plan — Please Review")
+        print(f"{'='*60}")
+        print(verification_plan)
+        print(f"{'='*60}")
 
     print("\nOptions:")
     print("  [Enter]  Approve and proceed")
@@ -384,6 +395,10 @@ async def run_workflow(task: str, repo_path: str = "", branch: str = "main",
         "_retries": {},
         "requirements_doc": "",
         "design_doc": "",
+        "existing_test_case_inventory": "",
+        "behavior_specs": "",
+        "test_case_changes": "",
+        "verification_plan": "",
         "test_cases": "",
         "user_feedback": "",
         "task_id": "",

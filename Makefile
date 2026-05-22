@@ -5,7 +5,7 @@ PIP := $(VENV)/bin/python -m pip
 HOST ?= 127.0.0.1
 PORT ?= 8080
 
-.PHONY: help venv install web list validate clean
+.PHONY: help venv install web list validate typecheck clean
 
 help:
 	@echo "Available targets:"
@@ -13,6 +13,7 @@ help:
 	@echo "  make web                      Start Evo web dashboard"
 	@echo "  make list                     List available workflows"
 	@echo "  make validate                 Validate workflow config"
+	@echo "  make typecheck                Run pyright from .venv"
 	@echo ""
 	@echo "  HOST=127.0.0.1 PORT=8080      Web dashboard bind address"
 
@@ -22,7 +23,7 @@ $(VENV)/bin/python:
 venv: $(VENV)/bin/python
 
 install: venv
-	$(PIP) install -e .
+	$(PIP) install -e ".[dev]"
 
 web: venv
 	@PIDS=$$(lsof -tiTCP:$(PORT) -sTCP:LISTEN 2>/dev/null); \
@@ -43,6 +44,9 @@ list: venv
 
 validate: venv
 	$(EVO) validate
+
+typecheck: venv
+	$(VENV)/bin/pyright
 
 clean:
 	rm -rf .pytest_cache build dist *.egg-info src/*.egg-info

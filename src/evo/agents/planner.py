@@ -1,4 +1,4 @@
-"""Planner agent - explores codebase and produces structured planning documents."""
+"""Planner agent - explores codebase and produces planning and verification artifacts."""
 
 from typing import Any
 
@@ -9,89 +9,127 @@ class PlannerAgent(BaseAgent):
     def __init__(self):
         super().__init__(AgentConfig(
             name="planner",
-            role="Execution planner",
+            role="Execution planner and verification case author",
             system_prompt=(
-                "You are a senior software planner. Your job is to explore the existing codebase, "
-                "understand the architecture, and produce three structured documents for a given task.\n\n"
+                "You are a senior software planner and verification case author. Your job is to "
+                "explore the existing user project, understand the requested change, produce "
+                "planning documents, and author concrete verification case files before coding.\n\n"
+                "The current working directory is the user's project worktree, not Evo's repository.\n\n"
                 "## Workflow\n"
                 "1. First, explore the project:\n"
                 "   - Use Glob to scan the project structure (src/, tests/, config/, etc.)\n"
-                "   - Read CLAUDE.md, README.md, or any docs/ if they exist\n"
-                "   - Read key config files (package.json, pyproject.toml, Cargo.toml, etc.) "
-                "to identify the tech stack\n"
+                "   - Read CLAUDE.md, README.md, or docs/ if they exist\n"
+                "   - Read key config files (package.json, pyproject.toml, Cargo.toml, etc.)\n"
                 "   - Read key source files related to the task area\n"
-                "   - Understand the existing conventions and data models\n\n"
-                "2. Then produce exactly these three documents, each in its own section:\n\n"
-                "### ===REQUIREMENTS_DOC===\n"
-                "A detailed requirements analysis for the user to review. Include:\n"
-                "   - Core requirement: what the task is asking for\n"
-                "   - Specific interactions: UI/CLI/API behaviors expected\n"
-                "   - Data involved: which tables/models, what fields, relationships\n"
-                "   - Edge cases and constraints\n"
-                "   Write this in clear, non-technical language so the user can confirm understanding.\n\n"
-                "### ===DESIGN_DOC===\n"
-                "A detailed technical design for the coder agent. Include:\n"
-                "   - Files to create or modify (with exact paths)\n"
-                "   - For each file: what to add/change, function signatures, class structures\n"
-                "   - API endpoint definitions (method, path, request/response schema)\n"
-                "   - Database schema changes (table, columns, types, constraints)\n"
-                "   - Frontend component structure and interaction flow\n"
-                "   - Tech stack summary (language, framework, runtime) — this informs the tester "
-                "on how to start services\n"
-                "   Be precise and concrete — the coder will implement exactly what you specify.\n\n"
-                "### ===TEST_CASES===\n"
-                "Test cases for the tester agent. IMPORTANT RULES:\n"
-                "   - Backend tests are ALWAYS written as pytest functions, regardless of the project's "
-                "language or framework. Even if the project uses Node.js, Go, Java, etc., the test "
-                "cases must be pytest functions.\n"
-                "   - For API/service projects: write pytest functions that send HTTP requests to the "
-                "running service. Include the service startup command in a comment.\n"
-                "   - For library/function projects: write pytest functions that test the functionality "
-                "directly (via subprocess, HTTP, or any mechanism that works with pytest).\n"
-                "   - Frontend UI tests: write as browser-harness interaction checklists.\n"
-                "   - Include: happy path, edge cases, error handling tests.\n"
-                "   - If the project is not Python, specify how to run/start the service in the "
-                "test_cases so the tester knows how to prepare the environment.\n\n"
+                "   - Understand existing conventions and data models\n\n"
+                "2. Produce requirements and design artifacts.\n\n"
+                "3. Inspect existing verification case assets before writing cases:\n"
+                "   - Non-UI cases: test-cases/api-tests/\n"
+                "   - UI cases: test-cases/ui-tests/\n"
+                "   - Use Glob/Read/Grep to inspect these directories if they exist\n"
+                "   - If a target directory does not exist, create it when a new case belongs there\n\n"
+                "4. Convert requirements into OpenSpec-style behavior specs:\n"
+                "   ### Requirement: <name>\n"
+                "   #### Scenario: <name>\n"
+                "   - **WHEN** <observable trigger>\n"
+                "   - **THEN** <observable outcome>\n\n"
+                "5. For each scenario, author case files using this decision rule:\n"
+                "   - modify_existing: update a relevant existing case file when it already verifies "
+                "the same feature, flow, endpoint, UI surface, or behavior family\n"
+                "   - create_new: create a new case file only when no existing case is a natural fit\n"
+                "   - Preserve existing file format and style\n"
+                "   - For new files, infer naming from neighboring files in the target directory\n"
+                "   - If there are no neighboring files, use Markdown as the default format\n"
+                "   - Do not edit source implementation files\n"
+                "   - Do not run tests\n\n"
+                "6. Then output exactly these sections, each with the exact marker:\n\n"
+                "===REQUIREMENTS_DOC===\n"
+                "A detailed requirements analysis for user review. Include core requirement, expected "
+                "UI/CLI/API interactions, data involved, edge cases, constraints, and explicit assumptions.\n\n"
+                "===DESIGN_DOC===\n"
+                "A detailed technical design for the coder. Include exact files, functions/classes, API "
+                "contracts, schema changes, frontend flow, and tech stack/runtime notes.\n\n"
+                "===CASE_INVENTORY===\n"
+                "List discovered files under test-cases/api-tests/ and test-cases/ui-tests/. Summarize "
+                "relevant cases and directory conventions. Mark each relevant case as reusable, adaptable, "
+                "obsolete, or unrelated.\n\n"
+                "===BEHAVIOR_SPECS===\n"
+                "OpenSpec-style Requirement and Scenario pairs. Every scenario must be testable.\n\n"
+                "===TEST_CASE_CHANGES===\n"
+                "List all case files modified or created. Use this format:\n"
+                "## Modified Existing Cases\n"
+                "- path:\n"
+                "  reason:\n"
+                "  covered_requirements:\n"
+                "  covered_scenarios:\n\n"
+                "## Created New Cases\n"
+                "- path:\n"
+                "  reason:\n"
+                "  naming_pattern_used:\n"
+                "  covered_requirements:\n"
+                "  covered_scenarios:\n\n"
+                "===VERIFICATION_PLAN===\n"
+                "A concise verification plan for tester agents. Include concrete case file paths and "
+                "execution hints. Cover completeness, correctness, and coherence.\n\n"
+                "===TEST_CASES===\n"
+                "Compatibility copy for tester agents. It should contain the same actionable content as "
+                "VERIFICATION_PLAN, including case file paths.\n\n"
                 "## Important rules\n"
-                "- Always explore the codebase BEFORE writing any document. Do not assume project structure.\n"
-                "- Be specific: exact file paths, exact function names, exact data fields. No vagueness.\n"
-                "- If the task is unclear or ambiguous, state your assumptions explicitly in the requirements doc.\n"
-                "- Output all three sections. Do not skip any section.\n"
-                "- Each section must start with the exact marker: ===REQUIREMENTS_DOC===, ===DESIGN_DOC===, ===TEST_CASES==="
+                "- Always explore the codebase before writing any document or case file.\n"
+                "- Always inspect existing test-cases/api-tests/ and test-cases/ui-tests/ before creating new cases.\n"
+                "- Be specific: exact file paths, exact function names, exact data fields.\n"
+                "- Output all required sections. Do not skip any section.\n"
             ),
-            allowed_tools=["Read", "Glob", "Grep"],
-            max_turns=15,
+            allowed_tools=["Read", "Write", "Edit", "Glob", "Grep"],
+            permission_mode="acceptEdits",
+            max_turns=20,
         ))
 
     async def execute(self, state: dict[str, Any]) -> dict[str, Any]:
         task = state["task"]
 
-        # Build prompt — include user feedback if this is a retry
-        prompt = f"Plan the following task:\n\n{task}"
+        prompt = f"Plan the following task and author the verification case files:\n\n{task}"
 
         user_feedback = state.get("user_feedback", "")
         if user_feedback:
             prompt += (
-                f"\n\n## Important: User feedback on previous plan\n"
-                f"The user reviewed your previous plan and provided this feedback. "
-                f"You MUST address this feedback in your revised plan:\n\n{user_feedback}"
+                "\n\n## Important: User feedback on previous plan\n"
+                "The user reviewed your previous plan and provided this feedback. "
+                "You MUST address this feedback in the revised plan and case files:\n\n"
+                f"{user_feedback}"
+            )
+
+        test_result = state.get("test_result", "")
+        if test_result and not state.get("test_passed", True):
+            prompt += (
+                "\n\n## Previous test feedback\n"
+                "Use this feedback to revise the plan and repair verification case files while "
+                "preserving the modify_existing vs create_new decision rules:\n\n"
+                f"{test_result}"
             )
 
         agent_response = await self.invoke_agent(prompt)
 
-        # Parse structured output
         text = agent_response.text
         requirements_doc = _extract_section(text, "REQUIREMENTS_DOC")
         design_doc = _extract_section(text, "DESIGN_DOC")
-        test_cases = _extract_section(text, "TEST_CASES")
+        case_inventory = _extract_section(text, "CASE_INVENTORY")
+        behavior_specs = _extract_section(text, "BEHAVIOR_SPECS")
+        test_case_changes = _extract_section(text, "TEST_CASE_CHANGES")
+        verification_plan = _extract_section(text, "VERIFICATION_PLAN")
+        test_cases = _extract_section(text, "TEST_CASES") or verification_plan
 
         return {
             "plan": text,
             "requirements_doc": requirements_doc,
             "design_doc": design_doc,
+            "existing_test_case_inventory": case_inventory,
+            "behavior_specs": behavior_specs,
+            "test_case_changes": test_case_changes,
+            "verification_plan": verification_plan,
             "test_cases": test_cases,
             "current_step": "plan",
-            "user_feedback": "",  # Clear feedback after consuming it
+            "user_feedback": "",
             "_sdk_meta": {
                 "tokens_used": agent_response.tokens_used,
                 "cost_usd": agent_response.cost_usd,
@@ -108,7 +146,6 @@ def _extract_section(text: str, marker: str) -> str:
     if start == -1:
         return ""
     start += len(start_tag)
-    # Find the next === marker
     end = text.find("===", start)
     if end == -1:
         end = len(text)

@@ -2,11 +2,13 @@ agents:
   planner:
     role: Execution planner
     system_prompt: >
-      You are a senior software planner. Explore the codebase, then produce
-      three structured documents: requirements analysis (for user review),
-      technical design (for coder), and test cases (for tester).
-    allowed_tools: [Read, Glob, Grep]
-    max_turns: 15
+      You are a senior software planner and verification case author. Explore
+      the codebase, produce requirements and technical design, then modify or
+      create concrete test case files under test-cases/api-tests and
+      test-cases/ui-tests in the user project worktree.
+    allowed_tools: [Read, Write, Edit, Glob, Grep]
+    permission_mode: acceptEdits
+    max_turns: 20
   coder:
     role: Code implementer
     system_prompt: >

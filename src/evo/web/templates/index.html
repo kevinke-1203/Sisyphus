@@ -452,31 +452,6 @@
         color: var(--text-dim);
         margin-right: 6px;
       }
-      .tmux-panel {
-        margin-top: 10px;
-        display: flex;
-        flex: 1 1 auto;
-        min-height: 0;
-        flex-direction: column;
-        gap: 8px;
-      }
-      .tmux-command {
-        padding: 8px 10px;
-        background: var(--surface2);
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        color: var(--text-dim);
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        font-size: 12px;
-        word-break: break-all;
-      }
-      .tmux-log {
-        margin-top: 0;
-        flex: 1 1 0;
-        height: auto;
-        min-height: 120px;
-        color: var(--text);
-      }
       .agent-message-form {
         position: sticky;
         bottom: 0;
@@ -975,11 +950,9 @@
             </div>
             <div class="task-meta">
                 ID: ${t.id} &middot; 工作流：${t.workflow || "默认"}
-                ${t.transport === "tmux" ? " &middot; tmux：" + esc(t.tmux_session || "") : ""}
                 ${t.error ? " &middot; 错误：" + esc(t.error) : ""}
                 ${t.result ? " &middot; " + (t.result.test_passed ? "测试通过" : "测试失败") : ""}
             </div>
-            ${renderTmuxPanel(t)}
             ${renderTaskLogs(t)}
             ${renderAgentMessageForm(t)}
         </div>
@@ -990,20 +963,6 @@
           input.value = runningDrafts[input.dataset.taskId] || "";
         });
         restoreTaskLogScroll();
-      }
-
-      function renderTmuxPanel(task) {
-        if (task.transport !== "tmux") return "";
-        const command =
-          task.tmux_attach_command ||
-          (task.tmux_session ? "tmux attach -t " + task.tmux_session : "");
-        const output = task.tmux_screen || task.tmux_log || "";
-        return `
-        <div class="tmux-panel">
-            ${command ? `<div class="tmux-command">${esc(command)}</div>` : ""}
-            <div class="task-log tmux-log" data-task-id="${esc(task.id)}-tmux" aria-label="tmux 输出">${esc(output || "等待 Claude Code 输出...")}</div>
-        </div>
-    `;
       }
 
       function renderTaskLogs(task) {
@@ -1034,10 +993,7 @@
       function renderAgentMessageForm(task) {
         const active = task.status === "pending" || task.status === "running";
         if (!active) return "";
-        const placeholder =
-          task.transport === "tmux"
-            ? "输入消息，发送到 tmux 中的 Claude Code..."
-            : "输入消息，打断当前 agent 并接入当前 Claude 会话...";
+        const placeholder = "输入消息，打断当前 agent 并接入当前 Claude 会话...";
         return `
         <form class="agent-message-form" data-task-id="${esc(task.id)}">
             <textarea class="agent-message-input" data-task-id="${esc(task.id)}" rows="1" placeholder="${placeholder}"></textarea>
